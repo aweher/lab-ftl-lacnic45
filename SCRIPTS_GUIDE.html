@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab EVPN/VXLAN — Guía interactiva</title>
+<style>
+  :root {
+    --bg: #0e1117;
+    --bg-elev: #161b22;
+    --bg-elev-2: #1c2128;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --accent-soft: rgba(88, 166, 255, .12);
+    --green: #56d364;
+    --yellow: #e3b341;
+    --red: #f85149;
+    --purple: #d2a8ff;
+    --code-bg: #0d1117;
+    --shadow: 0 4px 12px rgba(0,0,0,.4);
+  }
+  [data-theme="light"] {
+    --bg: #ffffff;
+    --bg-elev: #f6f8fa;
+    --bg-elev-2: #eef1f4;
+    --border: #d0d7de;
+    --text: #1f2328;
+    --text-muted: #59636e;
+    --accent: #0969da;
+    --accent-soft: rgba(9, 105, 218, .1);
+    --green: #1a7f37;
+    --yellow: #9a6700;
+    --red: #cf222e;
+    --purple: #8250df;
+    --code-bg: #f6f8fa;
+    --shadow: 0 2px 8px rgba(0,0,0,.08);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  body {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: 100vh;
+  }
+  /* SIDEBAR */
+  aside {
+    background: var(--bg-elev);
+    border-right: 1px solid var(--border);
+    padding: 1.5rem 1rem;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  aside .brand {
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin-bottom: .25rem;
+    color: var(--text);
+  }
+  aside .brand-sub {
+    font-size: .78rem;
+    color: var(--text-muted);
+    margin-bottom: 1.25rem;
+  }
+  aside input[type="search"] {
+    width: 100%;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: .5rem .65rem;
+    font-size: .85rem;
+    margin-bottom: 1rem;
+    outline: none;
+  }
+  aside input[type="search"]:focus { border-color: var(--accent); }
+  aside nav { display: flex; flex-direction: column; gap: 2px; }
+  aside nav a {
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: .4rem .65rem;
+    border-radius: 6px;
+    font-size: .88rem;
+    border-left: 2px solid transparent;
+    transition: all .15s ease;
+  }
+  aside nav a:hover { background: var(--accent-soft); color: var(--text); }
+  aside nav a.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-left-color: var(--accent);
+    font-weight: 500;
+  }
+  aside nav .nav-group {
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-muted);
+    margin-top: 1.2rem;
+    margin-bottom: .4rem;
+    padding: 0 .65rem;
+    opacity: .7;
+  }
+  aside nav .nav-group:first-child { margin-top: 0; }
+  .theme-toggle {
+    margin-top: 1.5rem;
+    padding: .5rem .75rem;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: .82rem;
+    width: 100%;
+    transition: background .15s;
+  }
+  .theme-toggle:hover { background: var(--accent-soft); }
+  /* MAIN */
+  main {
+    padding: 2.5rem 3rem 6rem;
+    max-width: 980px;
+  }
+  h1 {
+    font-size: 2rem;
+    margin: 0 0 .25rem;
+    font-weight: 700;
+    letter-spacing: -.02em;
+  }
+  h1 em { color: var(--accent); font-style: normal; }
+  .tagline { color: var(--text-muted); margin-bottom: 2rem; font-size: 1rem; }
+  h2 {
+    font-size: 1.5rem;
+    margin: 3rem 0 1rem;
+    padding-bottom: .5rem;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: -.01em;
+    scroll-margin-top: 1rem;
+  }
+  h3 {
+    font-size: 1.15rem;
+    margin: 1.8rem 0 .6rem;
+    color: var(--text);
+  }
+  h4 {
+    font-size: .95rem;
+    margin: 1.2rem 0 .4rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-weight: 600;
+  }
+  p { margin: 0 0 .9rem; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+  li { margin-bottom: .3rem; }
+  strong { color: var(--text); font-weight: 600; }
+  em { color: var(--purple); font-style: italic; }
+  code {
+    background: var(--bg-elev-2);
+    padding: .12em .4em;
+    border-radius: 4px;
+    font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: .85em;
+    color: var(--accent);
+    border: 1px solid var(--border);
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    overflow-x: auto;
+    position: relative;
+    margin: 0 0 1rem;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+    border: none;
+    color: var(--text);
+    font-size: .82rem;
+    line-height: 1.55;
+  }
+  .copy-btn {
+    position: absolute;
+    top: .5rem;
+    right: .5rem;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: .25rem .6rem;
+    border-radius: 5px;
+    font-size: .72rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .15s, color .15s;
+    font-family: inherit;
+  }
+  pre:hover .copy-btn { opacity: 1; }
+  .copy-btn:hover { color: var(--accent); }
+  .copy-btn.copied { color: var(--green); border-color: var(--green); }
+
+  /* CARDS / CALLOUTS */
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    padding: .8rem 1.1rem;
+    border-radius: 6px;
+    margin: 1.2rem 0;
+  }
+  .callout.warn { border-left-color: var(--yellow); background: rgba(227, 179, 65, .08); }
+  .callout.danger { border-left-color: var(--red); background: rgba(248, 81, 73, .08); }
+  .callout.success { border-left-color: var(--green); background: rgba(86, 211, 100, .08); }
+  .callout .callout-title {
+    font-weight: 600;
+    font-size: .82rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin-bottom: .35rem;
+  }
+  .callout.warn .callout-title { color: var(--yellow); }
+  .callout.danger .callout-title { color: var(--red); }
+  .callout.success .callout-title { color: var(--green); }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* TABLE */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0 1.5rem;
+    font-size: .9rem;
+  }
+  th, td {
+    padding: .55rem .8rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    background: var(--bg-elev);
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-size: .75rem;
+    letter-spacing: .05em;
+  }
+  tr:hover td { background: var(--bg-elev); }
+
+  /* SCRIPT CARD with TABS */
+  .script-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-elev);
+    margin: 1.5rem 0;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .script-card-header {
+    padding: 1.1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-elev-2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .8rem;
+  }
+  .script-card-header .script-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0;
+  }
+  .script-card-header .script-file {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    color: var(--accent);
+    font-size: .82rem;
+    background: var(--bg);
+    padding: .2rem .55rem;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-elev);
+    padding: 0 1.5rem;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    padding: .8rem 1rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: .85rem;
+    font-family: inherit;
+    transition: all .15s;
+    margin-bottom: -1px;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    font-weight: 500;
+  }
+  .tab-content {
+    display: none;
+    padding: 1.5rem;
+  }
+  .tab-content.active { display: block; }
+  .tab-content > *:first-child { margin-top: 0; }
+
+  /* DIAGRAM */
+  .diagram-wrap {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    overflow-x: auto;
+    box-shadow: var(--shadow);
+  }
+  .diagram-wrap svg { width: 100%; height: auto; max-width: 100%; display: block; }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+    font-size: .8rem;
+    color: var(--text-muted);
+  }
+  .legend-item { display: flex; align-items: center; gap: .4rem; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+
+  /* AGENDA */
+  .agenda-grid {
+    display: grid;
+    grid-template-columns: 60px 1fr 80px;
+    gap: .5rem 1rem;
+    align-items: center;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+  }
+  .agenda-grid .slot-num {
+    background: var(--accent-soft);
+    color: var(--accent);
+    text-align: center;
+    padding: .25rem;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: .82rem;
+  }
+  .agenda-grid .slot-min {
+    color: var(--text-muted);
+    text-align: right;
+    font-size: .82rem;
+  }
+  .agenda-grid .slot-text { font-size: .9rem; }
+
+  /* SCRIPT MAP cards (top of page) */
+  .script-map {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: .8rem;
+    margin: 1.5rem 0 2rem;
+  }
+  .script-tile {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .8rem 1rem;
+    text-decoration: none;
+    color: var(--text);
+    transition: all .15s;
+  }
+  .script-tile:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    text-decoration: none;
+    transform: translateY(-1px);
+  }
+  .script-tile .tile-num {
+    font-size: .72rem;
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: .05em;
+    margin-bottom: .2rem;
+  }
+  .script-tile .tile-name {
+    font-weight: 500;
+    margin-bottom: .15rem;
+    font-size: .95rem;
+  }
+  .script-tile .tile-desc {
+    font-size: .78rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  /* PRINT */
+  @media print {
+    aside { display: none; }
+    body { display: block; }
+    main { padding: 1rem; max-width: 100%; }
+    .tab-content { display: block !important; padding: 0; }
+    .tabs { display: none; }
+    .copy-btn { display: none; }
+    pre { page-break-inside: avoid; }
+  }
+  @media (max-width: 880px) {
+    body { grid-template-columns: 1fr; }
+    aside { position: relative; height: auto; }
+    main { padding: 1.5rem; }
+  }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body data-theme="dark">
+
+<aside>
+  <div class="brand">Lab EVPN/VXLAN</div>
+  <div class="brand-sub">LACNIC 45 · FTL · Ariel Weher</div>
+  <input type="search" id="search" placeholder="Buscar (Ctrl+K)…" autocomplete="off">
+  <nav id="toc">
+    <div class="nav-group">Overview</div>
+    <a href="#intro">Introducción</a>
+    <a href="#topo">Topología</a>
+    <a href="#agenda">Agenda 25 min</a>
+    <a href="#requisitos">Requisitos</a>
+    <a href="#updown">Levantar / bajar</a>
+
+    <div class="nav-group">Scripts</div>
+    <a href="#s01">01 · Underlay</a>
+    <a href="#s02">02 · Type-2 / Type-3</a>
+    <a href="#s03">03 · Type-5 + Anycast</a>
+    <a href="#s04">04 · Multi-tenancy</a>
+    <a href="#s05">05 · ESI-LAG</a>
+    <a href="#s06">06 · Peering inter-ASN</a>
+    <a href="#s07">07 · Captura VXLAN</a>
+    <a href="#s08">08 · Hardening</a>
+    <a href="#s09">09 · E-Line</a>
+
+    <div class="nav-group">Extras</div>
+    <a href="#convenciones">Convenciones</a>
+    <a href="#edgeshark">Edgeshark remoto</a>
+    <a href="#planb">Plan B</a>
+    <a href="#cmds">Comandos útiles</a>
+    <a href="#validate">validate.sh</a>
+    <a href="#runsh">run.sh (TUI)</a>
+    <a href="#estructura">Estructura del repo</a>
+  </nav>
+  <button class="theme-toggle" id="theme-toggle">☾ Cambiar tema</button>
+</aside>
+
+<main>
+
+<h1>Lab <em>EVPN &amp; VXLAN</em> — Guía interactiva</h1>
+<div class="tagline">El nuevo idioma del peering moderno · Containerlab + FRR 10.2.1</div>
+
+<section id="intro">
+<p>Esta es la guía interactiva del lab que armé para acompañar la charla en LACNIC 45 / FTL. Si llegaste acá sin haber visto la charla, no importa: la idea es que puedas correr el lab solo y entender qué hace cada cosa.</p>
+
+<p>El lab simula un <strong>IXP moderno</strong>: dos spines, tres leafs (que son los PE del IXP), y seis clientes. Cuatro participan del peering con sus propios ASNs, y dos son endpoints de un servicio E-Line punto a punto. Todo el plano de control corre <strong>BGP EVPN</strong>, el plano de datos es <strong>VXLAN</strong>, hay un cliente conectado multi-homed con <strong>ESI-LAG all-active</strong> sin necesidad de MLAG propietario, y un servicio L2 dedicado (E-Line) sobre VNI exclusivo.</p>
+
+<div class="script-map">
+  <a href="#s01" class="script-tile">
+    <div class="tile-num">SCRIPT 01</div>
+    <div class="tile-name">Underlay BGP</div>
+    <div class="tile-desc">eBGP unnumbered entre spines y leafs</div>
+  </a>
+  <a href="#s02" class="script-tile">
+    <div class="tile-num">SCRIPT 02</div>
+    <div class="tile-name">Type-2 &amp; Type-3</div>
+    <div class="tile-desc">MAC learning vía BGP, no flooding</div>
+  </a>
+  <a href="#s03" class="script-tile">
+    <div class="tile-num">SCRIPT 03</div>
+    <div class="tile-name">Type-5 + Anycast GW</div>
+    <div class="tile-desc">L3 simétrico, IRB distribuido</div>
+  </a>
+  <a href="#s04" class="script-tile">
+    <div class="tile-num">SCRIPT 04</div>
+    <div class="tile-name">Multi-tenancy</div>
+    <div class="tile-desc">VRFs aislados por Route Target</div>
+  </a>
+  <a href="#s05" class="script-tile">
+    <div class="tile-num">SCRIPT 05</div>
+    <div class="tile-name">ESI-LAG / Multi-homing</div>
+    <div class="tile-desc">All-active sin MLAG propietario</div>
+  </a>
+  <a href="#s06" class="script-tile">
+    <div class="tile-num">SCRIPT 06</div>
+    <div class="tile-name">Peering inter-ASN</div>
+    <div class="tile-desc">Clientes BGP sobre fabric EVPN</div>
+  </a>
+  <a href="#s07" class="script-tile">
+    <div class="tile-num">SCRIPT 07</div>
+    <div class="tile-name">Captura VXLAN</div>
+    <div class="tile-desc">El "idioma" en el cable</div>
+  </a>
+  <a href="#s08" class="script-tile">
+    <div class="tile-num">SCRIPT 08</div>
+    <div class="tile-name">Hardening</div>
+    <div class="tile-desc">BFD, GTSM, maximum-prefix</div>
+  </a>
+  <a href="#s09" class="script-tile">
+    <div class="tile-num">SCRIPT 09</div>
+    <div class="tile-name">E-Line</div>
+    <div class="tile-desc">L2 punto a punto (VNI 10300)</div>
+  </a>
+</div>
+</section>
+
+<h2 id="topo">Topología</h2>
+
+<div class="diagram-wrap">
+<svg viewBox="0 0 980 580" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .node-spine { fill: var(--bg-elev-2); stroke: var(--purple); stroke-width: 2; }
+      .node-leaf  { fill: var(--bg-elev-2); stroke: var(--accent); stroke-width: 2; }
+      .node-client{ fill: var(--bg-elev-2); stroke: var(--green); stroke-width: 2; }
+      .node-client-tb { fill: var(--bg-elev-2); stroke: var(--yellow); stroke-width: 2; }
+      .lbl-title  { fill: var(--text); font: bold 13px sans-serif; }
+      .lbl-sub    { fill: var(--text-muted); font: 11px sans-serif; }
+      .lbl-as     { fill: var(--accent); font: 11px monospace; }
+      .lbl-purple { fill: var(--purple); font: 11px monospace; }
+      .lbl-as-green { fill: var(--green); font: 11px monospace; }
+      .lbl-as-yellow { fill: var(--yellow); font: 11px monospace; }
+      .link       { stroke: var(--border); stroke-width: 1.5; fill: none; }
+      .link-esi   { stroke: var(--yellow); stroke-width: 2; stroke-dasharray: 4 3; fill: none; }
+      .iface-pill { fill: var(--bg); stroke: var(--border); stroke-width: 1; }
+      .iface-pill-esi { fill: var(--bg); stroke: var(--yellow); stroke-width: 1; }
+      .iface-lbl  { fill: var(--text-muted); font: 9.5px "SF Mono", Menlo, monospace; }
+      .iface-lbl-esi { fill: var(--yellow); font: 9.5px "SF Mono", Menlo, monospace; }
+    </style>
+  </defs>
+
+  <!-- Spines -->
+  <g>
+    <rect class="node-spine" x="260" y="30" width="170" height="70" rx="8"/>
+    <text class="lbl-title" x="345" y="52" text-anchor="middle">spine1</text>
+    <text class="lbl-purple" x="345" y="70" text-anchor="middle">AS 65001</text>
+    <text class="lbl-sub" x="345" y="86" text-anchor="middle">RR EVPN · 10.0.0.1</text>
+  </g>
+  <g>
+    <rect class="node-spine" x="555" y="30" width="170" height="70" rx="8"/>
+    <text class="lbl-title" x="640" y="52" text-anchor="middle">spine2</text>
+    <text class="lbl-purple" x="640" y="70" text-anchor="middle">AS 65002</text>
+    <text class="lbl-sub" x="640" y="86" text-anchor="middle">RR EVPN · 10.0.0.2</text>
+  </g>
+
+  <!-- Leafs -->
+  <g>
+    <rect class="node-leaf" x="80" y="220" width="170" height="80" rx="8"/>
+    <text class="lbl-title" x="165" y="244" text-anchor="middle">leaf1</text>
+    <text class="lbl-as" x="165" y="262" text-anchor="middle">AS 65011</text>
+    <text class="lbl-sub" x="165" y="278" text-anchor="middle">VTEP 10.0.0.11</text>
+    <text class="lbl-sub" x="165" y="292" text-anchor="middle">PE del IXP</text>
+  </g>
+  <g>
+    <rect class="node-leaf" x="405" y="220" width="170" height="80" rx="8"/>
+    <text class="lbl-title" x="490" y="244" text-anchor="middle">leaf2</text>
+    <text class="lbl-as" x="490" y="262" text-anchor="middle">AS 65012</text>
+    <text class="lbl-sub" x="490" y="278" text-anchor="middle">VTEP 10.0.0.12</text>
+    <text class="lbl-sub" x="490" y="292" text-anchor="middle">PE del IXP · ESI</text>
+  </g>
+  <g>
+    <rect class="node-leaf" x="730" y="220" width="170" height="80" rx="8"/>
+    <text class="lbl-title" x="815" y="244" text-anchor="middle">leaf3</text>
+    <text class="lbl-as" x="815" y="262" text-anchor="middle">AS 65013</text>
+    <text class="lbl-sub" x="815" y="278" text-anchor="middle">VTEP 10.0.0.13</text>
+    <text class="lbl-sub" x="815" y="292" text-anchor="middle">PE del IXP · ESI</text>
+  </g>
+
+  <!-- Clients -->
+  <g>
+    <rect class="node-client" x="50" y="425" width="130" height="65" rx="8"/>
+    <text class="lbl-title" x="115" y="447" text-anchor="middle">client-a</text>
+    <text class="lbl-as-green" x="115" y="465" text-anchor="middle">AS 64601</text>
+    <text class="lbl-sub" x="115" y="481" text-anchor="middle">single-homed</text>
+  </g>
+  <g>
+    <rect class="node-client" x="270" y="425" width="130" height="65" rx="8"/>
+    <text class="lbl-title" x="335" y="447" text-anchor="middle">client-b</text>
+    <text class="lbl-as-green" x="335" y="465" text-anchor="middle">AS 64602</text>
+    <text class="lbl-sub" x="335" y="481" text-anchor="middle">single-homed</text>
+  </g>
+  <g>
+    <rect class="node-client" x="490" y="425" width="150" height="65" rx="8"/>
+    <text class="lbl-title" x="565" y="447" text-anchor="middle">client-c</text>
+    <text class="lbl-as-green" x="565" y="465" text-anchor="middle">AS 64603</text>
+    <text class="lbl-sub" x="565" y="481" text-anchor="middle">ESI-LAG MH (bond0)</text>
+  </g>
+  <g>
+    <rect class="node-client-tb" x="740" y="425" width="150" height="65" rx="8"/>
+    <text class="lbl-title" x="815" y="447" text-anchor="middle">client-d</text>
+    <text class="lbl-as-yellow" x="815" y="465" text-anchor="middle">AS 64604</text>
+    <text class="lbl-sub" x="815" y="481" text-anchor="middle">tenant-B (aislado)</text>
+  </g>
+
+  <!-- E-Line clients -->
+  <g>
+    <rect class="node-client" x="50" y="510" width="130" height="55" rx="8" style="stroke:var(--red)"/>
+    <text class="lbl-title" x="115" y="530" text-anchor="middle">client-e</text>
+    <text class="lbl-sub" x="115" y="548" text-anchor="middle">E-Line · 203.0.113.1</text>
+  </g>
+  <g>
+    <rect class="node-client" x="270" y="510" width="130" height="55" rx="8" style="stroke:var(--red)"/>
+    <text class="lbl-title" x="335" y="530" text-anchor="middle">client-f</text>
+    <text class="lbl-sub" x="335" y="548" text-anchor="middle">E-Line · 203.0.113.2</text>
+  </g>
+
+  <!-- =========================================================
+       UNDERLAY links (spine <-> leaf)
+       Cada par de pills muestra interfaz local / remota
+       ========================================================= -->
+
+  <!-- spine1:eth1 <-> leaf1:eth1 -->
+  <line class="link" x1="305" y1="100" x2="190" y2="220"/>
+  <rect class="iface-pill" x="265" y="118" width="46" height="14" rx="3"/>
+  <text class="iface-lbl" x="288" y="128" text-anchor="middle">eth1</text>
+  <rect class="iface-pill" x="195" y="195" width="46" height="14" rx="3"/>
+  <text class="iface-lbl" x="218" y="205" text-anchor="middle">eth1</text>
+
+  <!-- spine1:eth2 <-> leaf2:eth1 -->
+  <line class="link" x1="345" y1="100" x2="460" y2="220"/>
+  <rect class="iface-pill" x="335" y="118" width="46" height="14" rx="3"/>
+  <text class="iface-lbl" x="358" y="128" text-anchor="middle">eth2</text>
+  <rect class="iface-pill" x="418" y="195" width="46" height="14" rx="3"/>
+  <text class="iface-lbl" x="441" y="205" text-anchor="middle">eth1</text>
+
+  <!-- spine1:eth3 <-> leaf3:eth1 -->
+  <line class="link" x1="385" y1="100" x2="760" y2="220"/>
+  <rect class="iface-pill" x="395" y="118" width="46" height="14" rx="3"/>
+  <text class="iface-lbl" x="418" y="128" text-anchor="middle">eth3</text>
+  <rect class="iface-pill" x="710" y="195" width="46" height="14" rx="3"/>
+  <text class="iface-lbl" x="733" y="205" text-anchor="middle">eth1</text>
+
+  <!-- spine2:eth1 <-> leaf1:eth2 -->
+  <line class="link" x1="600" y1="100" x2="220" y2="220"/>
+  <rect class="iface-pill" x="555" y="118" width="46" height="14" rx="3"/>
+  <text class="iface-lbl" x="578" y="128" text-anchor="middle">eth1</text>
+  <rect class="iface-pill" x="245" y="195" width="46" height="14" rx="3"/>
+  <text class="iface-lbl" x="268" y="205" text-anchor="middle">eth2</text>
+
+  <!-- spine2:eth2 <-> leaf2:eth2 -->
+  <line class="link" x1="640" y1="100" x2="490" y2="220"/>
+  <rect class="iface-pill" x="625" y="118" width="46" height="14" rx="3"/>
+  <text class="iface-lbl" x="648" y="128" text-anchor="middle">eth2</text>
+  <rect class="iface-pill" x="488" y="195" width="46" height="14" rx="3"/>
+  <text class="iface-lbl" x="511" y="205" text-anchor="middle">eth2</text>
+
+  <!-- spine2:eth3 <-> leaf3:eth2 -->
+  <line class="link" x1="680" y1="100" x2="790" y2="220"/>
+  <rect class="iface-pill" x="685" y="118" width="46" height="14" rx="3"/>
+  <text class="iface-lbl" x="708" y="128" text-anchor="middle">eth3</text>
+  <rect class="iface-pill" x="765" y="195" width="46" height="14" rx="3"/>
+  <text class="iface-lbl" x="788" y="205" text-anchor="middle">eth2</text>
+
+  <!-- =========================================================
+       ACCESS links (leaf <-> client)
+       ========================================================= -->
+
+  <!-- leaf1:eth3 <-> client-a:eth1 -->
+  <line class="link" x1="140" y1="300" x2="115" y2="425"/>
+  <rect class="iface-pill" x="115" y="320" width="46" height="14" rx="3"/>
+  <text class="iface-lbl" x="138" y="330" text-anchor="middle">eth3</text>
+  <rect class="iface-pill" x="92" y="403" width="46" height="14" rx="3"/>
+  <text class="iface-lbl" x="115" y="413" text-anchor="middle">eth1</text>
+
+  <!-- leaf2:eth3 <-> client-b:eth1 -->
+  <line class="link" x1="465" y1="300" x2="335" y2="425"/>
+  <rect class="iface-pill" x="412" y="330" width="46" height="14" rx="3"/>
+  <text class="iface-lbl" x="435" y="340" text-anchor="middle">eth3</text>
+  <rect class="iface-pill" x="312" y="403" width="46" height="14" rx="3"/>
+  <text class="iface-lbl" x="335" y="413" text-anchor="middle">eth1</text>
+
+  <!-- leaf2:eth4 <-> client-c:eth1 (ESI-LAG) -->
+  <line class="link-esi" x1="500" y1="300" x2="540" y2="425"/>
+  <rect class="iface-pill-esi" x="490" y="330" width="46" height="14" rx="3"/>
+  <text class="iface-lbl-esi" x="513" y="340" text-anchor="middle">eth4</text>
+  <rect class="iface-pill-esi" x="497" y="403" width="46" height="14" rx="3"/>
+  <text class="iface-lbl-esi" x="520" y="413" text-anchor="middle">eth1</text>
+
+  <!-- leaf3:eth3 <-> client-c:eth2 (ESI-LAG) -->
+  <line class="link-esi" x1="765" y1="300" x2="590" y2="425"/>
+  <rect class="iface-pill-esi" x="720" y="330" width="46" height="14" rx="3"/>
+  <text class="iface-lbl-esi" x="743" y="340" text-anchor="middle">eth3</text>
+  <rect class="iface-pill-esi" x="595" y="403" width="46" height="14" rx="3"/>
+  <text class="iface-lbl-esi" x="618" y="413" text-anchor="middle">eth2</text>
+
+  <!-- leaf3:eth4 <-> client-d:eth1 -->
+  <line class="link" x1="830" y1="300" x2="815" y2="425"/>
+  <rect class="iface-pill" x="830" y="330" width="46" height="14" rx="3"/>
+  <text class="iface-lbl" x="853" y="340" text-anchor="middle">eth4</text>
+  <rect class="iface-pill" x="792" y="403" width="46" height="14" rx="3"/>
+  <text class="iface-lbl" x="815" y="413" text-anchor="middle">eth1</text>
+
+  <!-- =========================================================
+       E-LINE links (VNI 10300)
+       ========================================================= -->
+
+  <!-- leaf1:eth5 <-> client-e:eth1 -->
+  <line class="link" x1="165" y1="300" x2="115" y2="510" style="stroke:var(--red);stroke-dasharray:6 3"/>
+  <rect class="iface-pill" x="148" y="365" width="46" height="14" rx="3" style="stroke:var(--red)"/>
+  <text class="iface-lbl" x="171" y="375" text-anchor="middle" style="fill:var(--red)">eth5</text>
+  <rect class="iface-pill" x="92" y="495" width="46" height="14" rx="3" style="stroke:var(--red)"/>
+  <text class="iface-lbl" x="115" y="505" text-anchor="middle" style="fill:var(--red)">eth1</text>
+
+  <!-- leaf2:eth5 <-> client-f:eth1 -->
+  <line class="link" x1="490" y1="300" x2="335" y2="510" style="stroke:var(--red);stroke-dasharray:6 3"/>
+  <rect class="iface-pill" x="445" y="365" width="46" height="14" rx="3" style="stroke:var(--red)"/>
+  <text class="iface-lbl" x="468" y="375" text-anchor="middle" style="fill:var(--red)">eth5</text>
+  <rect class="iface-pill" x="312" y="495" width="46" height="14" rx="3" style="stroke:var(--red)"/>
+  <text class="iface-lbl" x="335" y="505" text-anchor="middle" style="fill:var(--red)">eth1</text>
+
+</svg>
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div>Spines (Route Reflectors)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Leafs / VTEPs / PE</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Clientes tenant-A</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div>Cliente tenant-B (aislado)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--yellow); border-radius:0; height:3px"></div>ESI-LAG (LACP all-active)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--red); border-radius:0; height:3px"></div>E-Line (VNI 10300, punto a punto)</div>
+</div>
+</div>
+
+<p><strong>Underlay:</strong> eBGP unnumbered entre spines y leafs, IPv4 + IPv6 nexthop extendido. Los spines actúan como <strong>route reflectors</strong> para <code>l2vpn evpn</code>.</p>
+<p><strong>Overlay:</strong> EVPN sobre VXLAN, MAC-VRF + IP-VRF.</p>
+
+<table>
+  <thead><tr><th>VNI</th><th>Tipo</th><th>Función</th><th>VRF</th></tr></thead>
+  <tbody>
+    <tr><td><code>10100</code></td><td>L2</td><td>"VLAN Peering" del IXP (client-a/b/c)</td><td>tenant-A</td></tr>
+    <tr><td><code>10200</code></td><td>L2</td><td>Mgmt interno del IXP</td><td>tenant-A</td></tr>
+    <tr><td><code>20100</code></td><td>L2</td><td>LAN del tenant-B (client-d)</td><td>tenant-B</td></tr>
+    <tr><td><code>10300</code></td><td>L2</td><td>E-Line punto a punto (client-e ↔ client-f)</td><td>—</td></tr>
+    <tr><td><code>5000</code></td><td>L3</td><td>IP-VRF tenant-A (Type-5 + anycast GW 100.64.0.1)</td><td>tenant-A</td></tr>
+    <tr><td><code>5001</code></td><td>L3</td><td>IP-VRF tenant-B (aislado de A)</td><td>tenant-B</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <div class="callout-title">Anycast Gateway</div>
+  <p>Los SVIs <code>br10100</code> en leaf1/leaf2/leaf3 tienen <strong>la misma IP y el mismo MAC</strong> (<code>44:38:39:ff:00:64</code>). Para los clientes hay un único default GW, sin importar a qué leaf estén conectados.</p>
+</div>
+
+<h2 id="agenda">Agenda de 25 minutos</h2>
+<p>Cronograma sugerido para cubrir toda la charla con los demos en vivo:</p>
+<div class="agenda-grid">
+  <div class="slot-num">1</div><div class="slot-text"><strong>Mostrar la topología</strong> y plantear el problema del IXP clásico</div><div class="slot-min">2 min</div>
+  <div class="slot-num">2</div><div class="slot-text"><code>01-underlay.sh</code> · BGP unnumbered, sin direccionamiento p2p</div><div class="slot-min">2 min</div>
+  <div class="slot-num">3</div><div class="slot-text"><code>02-evpn-type2-type3.sh</code> · MAC learning vía BGP</div><div class="slot-min">4 min</div>
+  <div class="slot-num">4</div><div class="slot-text"><code>03-evpn-type5-anycast.sh</code> · Anycast GW + Type-5</div><div class="slot-min">3 min</div>
+  <div class="slot-num">5</div><div class="slot-text"><code>04-multitenancy.sh</code> · VRFs aislados sobre el mismo fabric</div><div class="slot-min">3 min</div>
+  <div class="slot-num">6</div><div class="slot-text"><code>05-mh-esi-lag.sh</code> · Multi-homing all-active sin MLAG</div><div class="slot-min">4 min</div>
+  <div class="slot-num">7</div><div class="slot-text"><code>06-peering-inter-asn.sh</code> · Clientes BGP sobre fabric EVPN</div><div class="slot-min">4 min</div>
+  <div class="slot-num">8</div><div class="slot-text"><code>07-vxlan-capture.sh</code> · El idioma en el cable</div><div class="slot-min">2 min</div>
+  <div class="slot-num">9</div><div class="slot-text"><code>08-hardening.sh</code> · BFD, GTSM, maximum-prefix</div><div class="slot-min">1 min</div>
+  <div class="slot-num">10</div><div class="slot-text"><code>09-eline.sh</code> · E-Line punto a punto</div><div class="slot-min">1 min</div>
+</div>
+
+<h2 id="requisitos">Requisitos</h2>
+<ul>
+  <li>Linux con kernel ≥ 5.10 (necesita soporte de VRF + EVPN MH en el kernel).</li>
+  <li>Docker ≥ 24.</li>
+  <li><a href="https://containerlab.dev" target="_blank">containerlab</a> ≥ 0.55.</li>
+  <li>Recursos: ~4 GB RAM y 2 vCPUs alcanzan.</li>
+</ul>
+<p>No instalo nada en tu máquina — los configs no tocan tu host fuera del directorio <code>lab/</code>.</p>
+
+<h2 id="updown">Levantar / bajar el lab</h2>
+<p>La forma más cómoda es usar el menú interactivo:</p>
+<pre><code>cd lab
+./run.sh               # TUI con gum: deploy, demos, shell, etc.</code></pre>
+<p>O bien directamente con los wrappers:</p>
+<pre><code>cd lab
+./scripts/up.sh        # containerlab deploy
+# ... demos ...
+./scripts/down.sh      # containerlab destroy --cleanup</code></pre>
+<p>Para validar todo el lab de una vez (corre los 9 scripts en secuencia):</p>
+<pre><code>./scripts/validate.sh 2>&1 | tee validate.log</code></pre>
+<p>Containerlab muestra una tabla con los nombres reales de los contenedores (todos con prefijo <code>clab-evpn-ixp-lab-</code>).</p>
+<p>Para entrar a la CLI de FRR en cualquier nodo:</p>
+<pre><code>docker exec -it clab-evpn-ixp-lab-leaf1 vtysh</code></pre>
+
+<h2 id="convenciones">Convenciones comunes a todos los scripts</h2>
+<p>Todos los scripts hacen <code>docker exec</code> contra los contenedores que levantó containerlab. Los nombres siguen el patrón <code>clab-&lt;labname&gt;-&lt;nodename&gt;</code>. Si en algún momento no te acordás el nombre, <code>sudo containerlab inspect -t topology.clab.yml</code> te lo tira.</p>
+<p>Dentro de cada contenedor FRR, todo se interactúa por <code>vtysh</code>. Es el shell unificado de FRR, equivalente al IOS de Cisco.</p>
+<pre><code># Interactivo en un nodo
+docker exec -it clab-evpn-ixp-lab-leaf1 vtysh
+
+# Comando único, sale del vtysh al terminar
+docker exec clab-evpn-ixp-lab-leaf1 vtysh -c "show bgp summary"</code></pre>
+
+<!-- ============== SCRIPT 01 ============== -->
+<h2 id="s01">Script 01 — Underlay BGP unnumbered</h2>
+<div class="script-card">
+  <div class="script-card-header">
+    <div class="script-title">Underlay BGP unnumbered</div>
+    <div class="script-file">scripts/01-underlay.sh</div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" data-target="s01-q">Qué hace</button>
+    <button class="tab-btn" data-target="s01-l">Línea por línea</button>
+    <button class="tab-btn" data-target="s01-m">Qué mirar</button>
+    <button class="tab-btn" data-target="s01-p">Por qué es relevante</button>
+    <button class="tab-btn" data-target="s01-e">Errores comunes</button>
+  </div>
+  <div class="tab-content active" id="s01-q">
+    <p>Muestra el plano de control de <strong>abajo de todo</strong>: cómo spines y leafs se ven entre sí en IP, sin VXLAN ni EVPN todavía. Es lo que un operador tradicional debería reconocer al primer vistazo: <strong>BGP IPv4 plano</strong>, sin OSPF, sin IS-IS, sin nada más.</p>
+  </div>
+  <div class="tab-content" id="s01-l">
+<pre><code>docker exec clab-evpn-ixp-lab-spine1 vtysh -c "show bgp summary"</code></pre>
+    <p>Le pide a spine1 el resumen de sus sesiones BGP. Sin la familia EVPN todavía (la vemos en el script 02).</p>
+<pre><code>docker exec clab-evpn-ixp-lab-leaf1 vtysh -c "show bgp summary"</code></pre>
+    <p>Lo mismo desde un leaf. El detalle clave: el peer es <strong>una interfaz</strong>, no una IP.</p>
+  </div>
+  <div class="tab-content" id="s01-m">
+<pre><code>Neighbor        V         AS   MsgRcvd   MsgSent   ...   State/PfxRcd
+leaf1(eth1)     4      65011        45        50   ...             3
+leaf2(eth2)     4      65012        47        50   ...             3
+leaf3(eth3)     4      65013        46        50   ...             3</code></pre>
+    <p>El peer es <strong>una interfaz</strong>, no una IP. Esto es <strong>BGP unnumbered</strong>. ¿Cómo funciona? FRR usa <strong>IPv6 link-local</strong> (las direcciones <code>fe80::...</code> que aparecen solas cuando levantás una interfaz) para establecer la sesión TCP, y dentro negocia la <code>capability extended-nexthop</code> para anunciar prefijos IPv4 con next-hop IPv6. Resultado: <strong>cero direccionamiento punto a punto</strong> que mantener.</p>
+  </div>
+  <div class="tab-content" id="s01-p">
+    <p><em>"en el peering moderno, el underlay desaparece de la conversación"</em>. No hay subnets /30 ni /31, no hay un script de IPAM para los enlaces internos, no hay un mapa de IPs que mantener. El día que agregás un leaf nuevo, lo enchufás y arranca.</p>
+  </div>
+  <div class="tab-content" id="s01-e">
+    <div class="callout warn"><div class="callout-title">No ver loopbacks aprendidas</div>
+    <p><code>show ip route bgp</code> devuelve vacío. Causa habitual: el <code>redistribute connected</code> no está, o el peer-group no tiene <code>activate</code> en la familia IPv4. Mirá <code>frr.conf</code> del spine afectado.</p></div>
+    <div class="callout warn"><div class="callout-title">BGP up pero EVPN no</div>
+    <p>Las sesiones IPv4 aparecen "Established" pero <code>show bgp l2vpn evpn summary</code> está vacío. Falta <code>neighbor FABRIC activate</code> dentro de <code>address-family l2vpn evpn</code>.</p></div>
+  </div>
+</div>
+
+<!-- ============== SCRIPT 02 ============== -->
+<h2 id="s02">Script 02 — Type-2 / Type-3 (MAC learning vía BGP)</h2>
+<div class="script-card">
+  <div class="script-card-header">
+    <div class="script-title">Tipos de ruta EVPN</div>
+    <div class="script-file">scripts/02-evpn-type2-type3.sh</div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" data-target="s02-q">Qué hace</button>
+    <button class="tab-btn" data-target="s02-l">Línea por línea</button>
+    <button class="tab-btn" data-target="s02-m">Qué mirar</button>
+    <button class="tab-btn" data-target="s02-p">Por qué es relevante</button>
+    <button class="tab-btn" data-target="s02-e">Errores comunes</button>
+  </div>
+  <div class="tab-content active" id="s02-q">
+    <p>Acá entra en escena lo que diferencia a EVPN de cualquier solución L2 anterior: <strong>las MACs se anuncian por BGP</strong>, no se aprenden por flooding.</p>
+    <p>El script hace un ping de client-a a client-b para forzar que se aprenda el MAC remoto. Como están en leafs distintos, ese aprendizaje <strong>viaja por BGP EVPN</strong>, no por flooding hacia un switch central.</p>
+  </div>
+  <div class="tab-content" id="s02-l">
+<pre><code>docker exec clab-evpn-ixp-lab-client-a ping -c 3 100.64.0.20</code></pre>
+    <p>Tres pings de client-a (.10) a client-b (.20). Si el lab está sano, latencias sub-ms. Si ves &gt;1ms, algo está mal.</p>
+<pre><code>docker exec clab-evpn-ixp-lab-leaf1 bridge fdb show br br10100 | grep -v permanent</code></pre>
+    <p>La tabla FDB del bridge <code>br10100</code> en leaf1. Vas a ver el MAC de client-a aprendido localmente en <code>eth3</code>, y el MAC de client-b <strong>detrás del dispositivo VXLAN</strong> apuntando al VTEP remoto (10.0.0.12). Lo concreto: el bridge no se enteró del MAC remoto por un frame, se enteró porque <strong>BGP se lo contó</strong>.</p>
+<pre><code>docker exec clab-evpn-ixp-lab-leaf1 vtysh -c "show bgp l2vpn evpn route vni 10100"</code></pre>
+    <p>Las rutas EVPN que viven en el L2VNI 10100. Acá se ve la magia. Cada entrada tiene un tipo:</p>
+    <ul>
+      <li><strong>Type-2 (MAC/IP advertisement):</strong> un MAC (y opcionalmente su IP) anunciado por un VTEP. Es <strong>el reemplazo directo del flood-and-learn</strong>.</li>
+      <li><strong>Type-3 (Inclusive Multicast Ethernet Tag):</strong> uno por cada VTEP que tiene la VNI activa. Sirve para <strong>BUM traffic</strong> (Broadcast, Unknown unicast, Multicast).</li>
+    </ul>
+<pre><code>docker exec clab-evpn-ixp-lab-leaf1 vtysh -c "show evpn vni"</code></pre>
+    <p>Resumen de las VNIs activas. Cuántas MACs aprendió cada VNI, cuántos VTEPs remotos descubrió, y en qué VRF está encolada (cuando es L3VNI).</p>
+  </div>
+  <div class="tab-content" id="s02-m">
+    <p>Lo más vistoso es la salida de <code>show bgp l2vpn evpn route vni 10100</code>. Vas a ver líneas que arrancan con <code>[2]:...</code> (Type-2) y <code>[3]:...</code> (Type-3). El formato del prefijo Type-2 es:</p>
+<pre><code>[2]:[EthTag]:[MAClen]:[MAC]:[IPlen]:[IP]</code></pre>
+    <p>Y la ruta trae el next-hop que es la <strong>loopback del VTEP que originó el anuncio</strong>, no la IP del cliente.</p>
+    <p>Esto es lo conceptual que tenés que vender: el cliente vive en <code>100.64.0.20</code>, pero en el <strong>plano de control del fabric</strong> lo que se anuncia es <em>"el MAC aa:bb:cc:dd:ee:ff está detrás del VTEP 10.0.0.12"</em>. La IP del cliente viaja <strong>adentro</strong> del anuncio del MAC, no es la clave del lookup.</p>
+  </div>
+  <div class="tab-content" id="s02-p">
+    <p>EVPN convierte el aprendizaje L2 en <strong>un problema de routing</strong>. Y los problemas de routing los sabemos resolver hace 30 años con BGP. No hay loops, no hay STP, no hay flooding masivo cuando se cae un puerto.</p>
+  </div>
+  <div class="tab-content" id="s02-e">
+    <div class="callout warn"><div class="callout-title">Route vni 10100 vacío</div>
+    <p>Las VTEPs no se descubrieron entre sí. Mirá <code>show evpn vni 10100 detail</code> y verificá que aparezcan VTEPs remotos. Si no aparecen, los Type-3 no están llegando — chequeá la sesión EVPN con los spines.</p></div>
+    <div class="callout warn"><div class="callout-title">MAC aprendido como "local" en dos leafs</div>
+    <p>Alguien sin querer puso un cliente single-homed en dos leafs sin ESI. Causa MAC flapping en EVPN (vas a ver el contador <code>Seq #</code>s subiendo solo).</p></div>
+  </div>
+</div>
+
+<!-- ============== SCRIPT 03 ============== -->
+<h2 id="s03">Script 03 — Type-5 y Anycast Gateway</h2>
+<div class="script-card">
+  <div class="script-card-header">
+    <div class="script-title">L3 simétrico y anycast GW</div>
+    <div class="script-file">scripts/03-evpn-type5-anycast.sh</div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" data-target="s03-q">Qué hace</button>
+    <button class="tab-btn" data-target="s03-l">Línea por línea</button>
+    <button class="tab-btn" data-target="s03-m">Qué mirar</button>
+    <button class="tab-btn" data-target="s03-p">Por qué es relevante</button>
+    <button class="tab-btn" data-target="s03-e">Errores comunes</button>
+  </div>
+  <div class="tab-content active" id="s03-q">
+    <p>Pasamos del L2 al L3. Hasta el script 02 los clientes se hablaban dentro de la misma subnet. Ahora vamos a ver cómo <strong>enrutar entre VNIs distintas</strong> sin mandar el tráfico a un firewall central o a un router único.</p>
+    <p>Dos cosas a la vez:</p>
+    <ol>
+      <li><strong>Anycast Gateway:</strong> el SVI <code>br10100</code> que actúa como default GW tiene <strong>la misma IP y la misma MAC en los tres leafs</strong>. Para el cliente, hay un solo gateway en <code>100.64.0.1</code>. En realidad le contesta el leaf más cercano siempre.</li>
+      <li><strong>EVPN Type-5 + IRB simétrico:</strong> los prefijos IP enrutados entre VRFs se anuncian como rutas Type-5. El leaf de ingreso enruta localmente al L3VNI correcto, encapsula en VXLAN, y manda al VTEP remoto. Es <strong>simétrico</strong>: enrutás en ingreso y en egreso.</li>
+    </ol>
+  </div>
+  <div class="tab-content" id="s03-l">
+<pre><code>docker exec clab-evpn-ixp-lab-leaf1 ip -d -br link show br10100
+docker exec clab-evpn-ixp-lab-leaf2 ip -d -br link show br10100
+docker exec clab-evpn-ixp-lab-leaf3 ip -d -br link show br10100</code></pre>
+    <p>El bridge <code>br10100</code> en los tres leafs. Lo importante es la <strong>MAC address</strong>: tiene que ser <strong>idéntica</strong> (<code>44:38:39:ff:00:64</code>). Esa es la magia del anycast: el cliente arpea el gateway y le contesta el primero que reciba el ARP. Como los tres leafs tienen el mismo MAC, <strong>no importa cuál conteste</strong>.</p>
+<pre><code>docker exec clab-evpn-ixp-lab-leaf1 vtysh -c "show bgp l2vpn evpn route type prefix"</code></pre>
+    <p>Las rutas Type-5 recibidas. Formato:</p>
+<pre><code>[5]:[EthTag]:[IPlen]:[IP]</code></pre>
+    <p>La ruta trae como extended community el <strong>Router MAC</strong> del VTEP destino — eso es lo que el leaf usa para reescribir la MAC del paquete antes de meterlo en el VXLAN del L3VNI.</p>
+<pre><code>docker exec clab-evpn-ixp-lab-leaf1 vtysh -c "show ip route vrf tenant-A"</code></pre>
+    <p>La tabla de ruteo del VRF tenant-A. Connecteds locales + recibidas vía EVPN (que aparecen como <code>B&gt;</code> con flag de external).</p>
+  </div>
+  <div class="tab-content" id="s03-m">
+    <p>La línea más vendedora es esta:</p>
+<pre><code>br10100 ... link/ether 44:38:39:ff:00:64</code></pre>
+    <p>Aparece <strong>igual</strong> en los tres leafs. Cualquier ingeniero de red con experiencia mira eso y dice <em>"eso debería romper todo, dos interfaces no pueden tener el mismo MAC en el mismo broadcast domain"</em>. Y vos contestás: <em>"el broadcast domain está estirado por EVPN, y EVPN sabe que el MAC anycast es local en todos los leafs, así que nunca lo anuncia como Type-2"</em>. Boom.</p>
+  </div>
+  <div class="tab-content" id="s03-p">
+    <p>El anycast gateway elimina el problema del <em>"default gateway lejos"</em>. En una red tradicional, si tu cliente está en el rack 5 y el GW está en el core, cada paquete enrutado va y vuelve por todo el fabric. Con anycast, el primer hop L3 es <strong>el leaf donde está el cliente</strong>. Latencia mínima, sin tromboning.</p>
+  </div>
+  <div class="tab-content" id="s03-e">
+    <div class="callout warn"><div class="callout-title">MAC distinto entre leafs</div>
+    <p>El cliente va a ver MAC flapping en su tabla ARP. La causa: alguien se olvidó del <code>ip link set br10100 address 44:38:39:ff:00:64</code> en el <code>init.sh</code> de algún leaf.</p></div>
+    <div class="callout warn"><div class="callout-title">Type-5 sin Router MAC</div>
+    <p>El VRF no tiene un L3VNI asociado, o el <code>advertise ipv4 unicast</code> no está dentro del <code>router bgp &lt;ASN&gt; vrf &lt;VRF&gt; address-family l2vpn evpn</code>.</p></div>
+  </div>
+</div>
+
+<!-- ============== SCRIPT 04 ============== -->
+<h2 id="s04">Script 04 — Multi-tenancy real con VRFs</h2>
+<div class="script-card">
+  <div class="script-card-header">
+    <div class="script-title">Multi-tenancy con VRFs y Route Targets</div>
+    <div class="script-file">scripts/04-multitenancy.sh</div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" data-target="s04-q">Qué hace</button>
+    <button class="tab-btn" data-target="s04-l">Línea por línea</button>
+    <button class="tab-btn" data-target="s04-m">Qué mirar</button>
+    <button class="tab-btn" data-target="s04-p">Por qué es relevante</button>
+    <button class="tab-btn" data-target="s04-e">Errores comunes</button>
+  </div>
+  <div class="tab-content active" id="s04-q">
+    <p>Demuestra que <strong>dos clientes pueden vivir en el mismo hardware, en el mismo fabric, y no verse</strong>. No por una ACL, no por un firewall — por <strong>separación de tablas de ruteo</strong> (VRFs) y separación de plano de control (Route Targets en BGP EVPN).</p>
+  </div>
+  <div class="tab-content" id="s04-l">
+<pre><code>docker exec clab-evpn-ixp-lab-client-a ping -W 2 -c 2 172.16.100.40 \
+  || echo "[OK] sin alcanzabilidad entre tenants"</code></pre>
+    <p>Ping de client-a (tenant-A, <code>100.64.0.0/24</code>) a client-d (tenant-B, <code>172.16.100.0/24</code>). <strong>Tiene que fallar</strong>. Si funciona, hay algo mal con los Route Targets.</p>
+<pre><code>docker exec clab-evpn-ixp-lab-leaf3 vtysh -c "show ip route vrf tenant-A"
+docker exec clab-evpn-ixp-lab-leaf3 vtysh -c "show ip route vrf tenant-B"</code></pre>
+    <p>Las dos tablas de ruteo del mismo leaf. Son <strong>mundos distintos</strong>. La 100.64.0.0/24 aparece en tenant-A y no en tenant-B.</p>
+<pre><code>docker exec clab-evpn-ixp-lab-leaf1 vtysh -c "show bgp l2vpn evpn vni"</code></pre>
+    <p>Te muestra los Route Distinguishers y Route Targets de cada VNI. Por default FRR genera <code>RD = &lt;router-id&gt;:&lt;vni&gt;</code> y <code>RT = &lt;ASN&gt;:&lt;vni&gt;</code>. Lo importante: <strong>dos VNIs en VRFs distintos tienen RTs distintos</strong>, así que un leaf en ambos VRFs <strong>no importa anuncios de un VRF al otro</strong>.</p>
+  </div>
+  <div class="tab-content" id="s04-m">
+    <p>Lo primero es el ping fallando. Hacelo dramático: pausá un segundo después del <em>"100% packet loss"</em>, mirá a la cámara, decí <em>"esto es lo que un IXP no puede hacer hoy con una LAN compartida"</em>.</p>
+    <p>Después mostrá las dos tablas de ruteo lado a lado. Lo conceptual: <strong>el mismo router, el mismo hardware, el mismo cable, dos mundos completamente aislados</strong>.</p>
+  </div>
+  <div class="tab-content" id="s04-p">
+    <p>Hoy un IXP típico tiene UNA LAN compartida. Todos los miembros están en el mismo broadcast domain. Si querés separar un grupo (servicios públicos vs. privados, peering distinto por región, etc.), tenés que armar <strong>otra LAN física o virtual</strong> con su propio switch o su propia VLAN.</p>
+    <p>Con EVPN, un IXP puede ofrecer <strong>20 LANs separadas sobre el mismo fabric</strong> sin pelear con spanning-tree, sin VLANs duplicadas, sin desplegar hardware nuevo. Cada cliente en su VRF, sin enterarse de los demás, y el operador mantiene un solo plano de control.</p>
+  </div>
+  <div class="tab-content" id="s04-e">
+    <div class="callout warn"><div class="callout-title">El ping funciona y no debería</div>
+    <p>Se mezclaron los Route Targets. Algún VRF está importando RTs del otro. Mirá <code>show bgp l2vpn evpn vni &lt;vni&gt;</code> y verificá los <code>Import RTs</code> / <code>Export RTs</code>.</p></div>
+    <div class="callout warn"><div class="callout-title">Las tablas de ruteo están vacías</div>
+    <p>Falta el <code>vni &lt;l3vni&gt;</code> dentro de la stanza <code>vrf &lt;name&gt;</code>, o falta el <code>router bgp &lt;ASN&gt; vrf &lt;name&gt;</code> con el <code>advertise ipv4 unicast</code>.</p></div>
+  </div>
+</div>
+
+<!-- ============== SCRIPT 05 ============== -->
+<h2 id="s05">Script 05 — Multi-Homing ESI-LAG all-active</h2>
+<div class="script-card">
+  <div class="script-card-header">
+    <div class="script-title">ESI-LAG sin MLAG propietario</div>
+    <div class="script-file">scripts/05-mh-esi-lag.sh</div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" data-target="s05-q">Qué hace</button>
+    <button class="tab-btn" data-target="s05-c">Cooldown</button>
+    <button class="tab-btn" data-target="s05-l">Línea por línea</button>
+    <button class="tab-btn" data-target="s05-m">Qué mirar</button>
+    <button class="tab-btn" data-target="s05-p">Por qué es relevante</button>
+    <button class="tab-btn" data-target="s05-d">Detalle escondido</button>
+    <button class="tab-btn" data-target="s05-e">Errores comunes</button>
+  </div>
+  <div class="tab-content active" id="s05-q">
+    <p>Este es el script más vistoso de toda la demo. Demuestra que un cliente puede estar conectado a <strong>dos leafs distintos al mismo tiempo</strong>, con <strong>ambos links activos</strong> (LACP all-active), sin spanning-tree, sin MLAG propietario, sin VPC. Y si se cae un link, el tráfico no se entera.</p>
+  </div>
+  <div class="tab-content" id="s05-c">
+    <div class="callout danger">
+      <div class="callout-title">Cooldown obligatorio de 60 segundos</div>
+      <p>La primera línea funcional del script chequea un timestamp. Si se ejecutó hace menos de 60s, aborta con mensaje claro y <code>exit 2</code>.</p>
+      <p>¿Por qué? Tirar un link y subirlo deja a FRR, LACP y al fabric EVPN trabajando varios segundos después: re-elección de DF, re-anuncio de Type-2, renegociación LACP. Si dispararas el script de nuevo en el medio de esa re-convergencia, el lab puede quedar en un estado raro (lo aprendí a fuerza de romperlo: una vez bgpd murió en un leaf y no se reinició solo).</p>
+    </div>
+<pre><code># Forzar (a sabiendas)
+FORCE=1 ./scripts/05-mh-esi-lag.sh
+
+# Bajar el cooldown para un test
+COOLDOWN=10 ./scripts/05-mh-esi-lag.sh</code></pre>
+  </div>
+  <div class="tab-content" id="s05-l">
+<pre><code>docker exec clab-evpn-ixp-lab-leaf2 vtysh -c "show evpn es"</code></pre>
+    <p>Lista de <strong>Ethernet Segments (ES)</strong> locales en leaf2. Una sola entrada con ESI <code>03:02:00:00:00:00:0c:00:00:01</code>. Los dos primeros bytes (<code>03</code>) indican que es <em>"Auto-generated based on LACP"</em>, y los siguientes 9 bytes son el system-MAC LACP del peer (en este lab forzamos a <code>02:00:00:00:00:0c</code> en leaf2 y leaf3).</p>
+<pre><code>docker exec clab-evpn-ixp-lab-leaf2 vtysh -c "show bgp l2vpn evpn route type ead"</code></pre>
+    <p>Las rutas <strong>Type-1 (Ethernet A-D)</strong>. Dos sub-tipos:</p>
+    <ul>
+      <li><strong>EAD-per-EVI:</strong> una ruta por cada (ES × EVI), para fast convergence.</li>
+      <li><strong>EAD-per-ES:</strong> una ruta por ES, para alias y mass-withdraw.</li>
+    </ul>
+    <p>Cuando se cae un link, el leaf afectado <strong>retira la EAD-per-ES</strong> y los otros leafs reciben ese retiro como una señal de <em>"este VTEP ya no puede llegar a ese ES, sacálo del aggregate"</em>. Eso es lo que hace que el failover sea rápido.</p>
+<pre><code>docker exec -d clab-evpn-ixp-lab-client-a sh -c \
+  'ping -i 0.2 100.64.0.30 &gt; /tmp/ping.log 2&gt;&amp;1'
+sleep 2
+docker exec clab-evpn-ixp-lab-leaf2 ip link set eth4 down
+sleep 5
+docker exec clab-evpn-ixp-lab-leaf2 ip link set eth4 up</code></pre>
+    <p>Arranca ping en background, espera 2s, baja el link client-c↔leaf2, deja 5s de solo-leaf3, restaura el link.</p>
+<pre><code>docker exec clab-evpn-ixp-lab-client-a tail -30 /tmp/ping.log \
+  | grep -E "packets transmitted|icmp_seq" | tail -10</code></pre>
+    <p>El resumen del ping. Si todo funciona bien, vas a ver <strong>0% packet loss</strong> — o cerca (el lab real mide ~150ms de pérdida total, lo que en pings de 0.2s son 1-2 paquetes).</p>
+  </div>
+  <div class="tab-content" id="s05-m">
+    <p>Primero, en <code>show evpn es</code>, mostrar el <strong>ESI no-cero</strong>. Una conexión single-homed tiene ESI = <code>00:00:00:00:00:00:00:00:00:00</code>. Una multi-homed tiene un ESI <strong>único, generado por LACP, idéntico en los leafs que comparten el ES</strong>.</p>
+    <p>Después, durante el failover, el ping no debería interrumpirse de forma visible. Si en tu demo en vivo el ping sigue corriendo sin dejar de imprimir respuestas, <strong>ese es el momento aplausos</strong>.</p>
+  </div>
+  <div class="tab-content" id="s05-p">
+    <p>Multi-chassis link aggregation siempre fue vendor-specific: MLAG en Arista, VPC en Cisco, MC-LAG en Juniper. Cada uno con su propio protocolo de sincronización entre los dos switches, sus bugs, sus limitaciones. Y casi todos sufren del <strong>split-brain</strong>: si los dos switches dejan de hablarse, ambos creen que el otro está muerto y empiezan a forwardear desde los dos lados → loop garantizado.</p>
+    <p>EVPN multi-homing <strong>no necesita comunicación directa entre los leafs</strong>. Toda la coordinación pasa por BGP EVPN. El ESI auto-generado por LACP hace que los leafs "se reconozcan" como parte del mismo ES sin haber sido configurados como par. <strong>Es un estándar (RFC 7432), corre en cualquier vendor que lo implemente, y no tiene split-brain.</strong></p>
+  </div>
+  <div class="tab-content" id="s05-d">
+    <div class="callout warn">
+      <div class="callout-title">El detalle que casi arruina la demo</div>
+      <p>LACP entre client-c y los dos leafs <strong>necesita que los leafs anuncien el mismo system-id LACP</strong> para que el cliente los agregue en el mismo bundle. Si no, el cliente ve dos peers LACP distintos y solo activa un puerto a la vez (failover de 3 segundos, no de 200ms).</p>
+    </div>
+    <p>En el <code>init.sh</code> de leaf2 y leaf3 esto se hace así:</p>
+<pre><code>ip link add bond-esi10 type bond mode 802.3ad miimon 100 lacp_rate fast \
+  ad_actor_system 02:00:00:00:00:0c ad_actor_sys_prio 100</code></pre>
+    <p>El <code>ad_actor_system 02:00:00:00:00:0c</code> es lo que LACP pone en el system-id del LACPDU. Si lo omitís, el kernel pone el MAC del bond (auto-asignado, distinto en cada leaf). Sin esto, <strong>el lab "funciona" pero el failover no impresiona</strong>.</p>
+  </div>
+  <div class="tab-content" id="s05-e">
+    <div class="callout warn"><div class="callout-title">El ping pierde 60+ paquetes</div>
+    <p>El bond del cliente solo tiene <code>Number of ports: 1</code>. Verificá en <code>cat /proc/net/bonding/bond0</code> del cliente que diga <code>Number of ports: 2</code> y <code>Partner Mac Address: 02:00:00:00:00:0c</code>.</p></div>
+    <div class="callout warn"><div class="callout-title">El script se ejecuta dos veces y queda raro</div>
+    <p>Respetá el cooldown. Si pasó algo igual y el lab no anda: <code>./scripts/down.sh &amp;&amp; ./scripts/up.sh</code>.</p></div>
+    <div class="callout warn"><div class="callout-title"><code>show evpn es</code> no muestra el ESI</div>
+    <p>El <code>evpn mh es-id</code> no está en la configuración FRR del leaf, o la interfaz <code>bond-esi10</code> no existe en zebra.</p></div>
+  </div>
+</div>
+
+<!-- ============== SCRIPT 06 ============== -->
+<h2 id="s06">Script 06 — Peering entre ASNs sobre el fabric</h2>
+<div class="script-card">
+  <div class="script-card-header">
+    <div class="script-title">Clientes BGP sobre fabric EVPN</div>
+    <div class="script-file">scripts/06-peering-inter-asn.sh</div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" data-target="s06-q">Qué hace</button>
+    <button class="tab-btn" data-target="s06-l">Línea por línea</button>
+    <button class="tab-btn" data-target="s06-m">Qué mirar</button>
+    <button class="tab-btn" data-target="s06-p">Por qué es relevante</button>
+    <button class="tab-btn" data-target="s06-e">Errores comunes</button>
+  </div>
+  <div class="tab-content active" id="s06-q">
+    <p>Este es <strong>el caso de uso que da nombre a la charla</strong>: clientes con ASNs distintos haciendo eBGP entre sí, como en cualquier IXP del mundo, pero sobre un fabric EVPN/VXLAN en lugar de una LAN física compartida.</p>
+    <p>La gracia es que <strong>el fabric no participa</strong>. Las sesiones BGP de los clientes son TCP/179 que viajan <strong>encapsuladas en VXLAN como cualquier otro paquete</strong>. Para BGP, es como si los clientes estuvieran en el mismo cable.</p>
+  </div>
+  <div class="tab-content" id="s06-l">
+<pre><code>docker exec clab-evpn-ixp-lab-client-a vtysh -c "show bgp summary"</code></pre>
+    <p>Estado de las sesiones BGP de client-a. Dos vecinos: client-b (AS 64602) y client-c (AS 64603). Ambos "Established".</p>
+<pre><code>docker exec clab-evpn-ixp-lab-client-a vtysh -c "show ip bgp"</code></pre>
+    <p>La tabla BGP de client-a:</p>
+<pre><code>*&gt;  192.0.2.10/32    0.0.0.0           0         32768 i     &lt;- propia
+*&gt;  192.0.2.20/32    100.64.0.20       0             0 64602 i
+*   192.0.2.20/32    100.64.0.20                     0 64603 64602 i  &lt;- alt
+*&gt;  192.0.2.30/32    100.64.0.30       0             0 64603 i
+*   192.0.2.30/32    100.64.0.30                     0 64602 64603 i  &lt;- alt</code></pre>
+    <p>Cada loopback aparece con dos paths: directo (un AS) y por el otro peer en transit (dos AS). El best path se elige por AS-PATH más corta, como siempre.</p>
+<pre><code>docker exec clab-evpn-ixp-lab-client-a traceroute -n 192.0.2.20</code></pre>
+    <p>Traceroute al loopback de client-b. <strong>Tiene que dar un solo hop visible</strong>. El fabric (leafs y spines) <strong>no aparece</strong> porque están bridgeando, no enrutando, los paquetes entre clientes.</p>
+<pre><code>docker exec clab-evpn-ixp-lab-leaf1 vtysh -c "show bgp ipv4 unicast" | head -20</code></pre>
+    <p>La tabla BGP del leaf — la del fabric, no la de los clientes. <strong>No tiene que ver los prefijos de los clientes</strong> (192.0.2.x/32). El leaf solo aprende loopbacks del fabric (10.0.0.x/32).</p>
+  </div>
+  <div class="tab-content" id="s06-m">
+    <p>El golpe está en la comparación: la tabla BGP de client-a tiene los prefijos de los otros clientes. La tabla BGP del leaf <strong>no los tiene</strong>. <strong>El fabric ni se entera de las sesiones BGP de sus clientes.</strong></p>
+    <p>Esto es lo que un IXP necesita: ofrecer conectividad L2 entre miembros sin meter las narices en lo que ellos hacen arriba.</p>
+  </div>
+  <div class="tab-content" id="s06-p">
+    <p>Hoy un IXP tiene <strong>un servicio</strong>: la LAN de peering. Si querés ofrecer un servicio adicional (un closed user group, una LAN privada entre dos miembros, una LAN para DNS root), tenés que armar otra LAN física o virtual.</p>
+    <p>Con EVPN, un IXP puede ofrecer <strong>N LANs distintas sobre el mismo fabric</strong>, cada una con sus propios miembros, políticas, route servers. <strong>Un solo plano de control para el operador, N servicios para el cliente.</strong></p>
+  </div>
+  <div class="tab-content" id="s06-e">
+    <div class="callout warn"><div class="callout-title">Las sesiones BGP entre clientes no levantan</div>
+    <p>Los clientes están en la misma subnet pero no se ven en L2. El L2VNI no está bien — empezá por el script 02 para descartar.</p></div>
+    <div class="callout warn"><div class="callout-title">El leaf ve los prefijos de los clientes en BGP IPv4</div>
+    <p>Alguien metió un <code>redistribute connected</code> que agarra rutas que no debería, o un cliente está peerando contra el SVI del leaf en vez de contra otro cliente. Mirá las configs FRR de los clientes.</p></div>
+  </div>
+</div>
+
+<!-- ============== SCRIPT 07 ============== -->
+<h2 id="s07">Script 07 — Captura VXLAN en el cable</h2>
+<div class="script-card">
+  <div class="script-card-header">
+    <div class="script-title">El "idioma" en el cable</div>
+    <div class="script-file">scripts/07-vxlan-capture.sh</div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" data-target="s07-q">Qué hace</button>
+    <button class="tab-btn" data-target="s07-l">Línea por línea</button>
+    <button class="tab-btn" data-target="s07-m">Qué mirar</button>
+    <button class="tab-btn" data-target="s07-p">Por qué es relevante</button>
+    <button class="tab-btn" data-target="s07-mtu">MTU</button>
+    <button class="tab-btn" data-target="s07-e">Errores comunes</button>
+  </div>
+  <div class="tab-content active" id="s07-q">
+    <p>Captura paquetes VXLAN en el cable y te los muestra crudos. Es el cierre de la charla: después de hablar de planos de control, family EVPN, multi-tenancy y demás, le mostrás a la audiencia <strong>qué hay realmente viajando en los enlaces del fabric</strong>.</p>
+  </div>
+  <div class="tab-content" id="s07-l">
+<pre><code>docker exec -d clab-evpn-ixp-lab-spine1 sh -c \
+  'tcpdump -i eth1 -nn -e -c 10 "udp port 4789" &gt; /tmp/vxlan.pcap 2&gt;&amp;1'</code></pre>
+    <p>Arranca <code>tcpdump</code> en el enlace spine1↔leaf1 (eth1 desde el lado del spine), filtrando solo <strong>UDP destino 4789</strong> (el puerto IANA de VXLAN). Captura 10 paquetes a <code>/tmp/vxlan.pcap</code>.</p>
+<pre><code>docker exec clab-evpn-ixp-lab-client-a ping -c 5 100.64.0.20 &gt;/dev/null</code></pre>
+    <p>Dispara 5 pings de client-a a client-b. Como están en leafs distintos, el tráfico tiene que pasar por los spines, encapsulado en VXLAN.</p>
+<pre><code>docker exec clab-evpn-ixp-lab-spine1 cat /tmp/vxlan.pcap</code></pre>
+    <p>Imprime la captura.</p>
+  </div>
+  <div class="tab-content" id="s07-m">
+    <p>Buscá un paquete con esta estructura:</p>
+<pre><code>14:23:45.123456 02:42:0a:00:00:0b > 02:42:0a:00:00:01, ethertype IPv4,
+  10.0.0.11.45678 > 10.0.0.12.4789: VXLAN, flags [I] (0x08), vni 10100
+  aa:c1:ab:11:22:33 > aa:c1:ab:44:55:66, ethertype IPv4,
+  100.64.0.10 > 100.64.0.20: ICMP echo request</code></pre>
+    <p>Acá hay <strong>dos paquetes Ethernet en el mismo frame</strong>:</p>
+    <ol>
+      <li><strong>El outer:</strong> viaja entre las loopbacks de los leafs (10.0.0.11 → 10.0.0.12), puerto UDP 4789. Es <strong>lo que ve el underlay</strong>.</li>
+      <li><strong>El inner:</strong> el ICMP original del cliente (100.64.0.10 → 100.64.0.20), con sus MACs y todo. Es <strong>lo que el cliente cree que está mandando</strong>.</li>
+    </ol>
+    <p>En el medio está el header VXLAN, que contiene el <strong>VNI</strong> (<code>vni 10100</code> en la salida). Eso es lo que le dice al leaf de destino en qué bridge tiene que poner el frame al des-encapsular.</p>
+  </div>
+  <div class="tab-content" id="s07-p">
+    <p>Esta es la diapositiva donde decís: <em>"todo lo que vimos hasta acá es BGP contándonos cosas. Pero el plano de datos es esto: IP que transporta Ethernet, sin más."</em></p>
+    <p>VXLAN es <strong>brutalmente simple</strong> comparado con MPLS-EVPN: no hay LSPs, no hay LDP, no hay restricciones de MTU dolorosas (siempre que el underlay tenga jumbo frames habilitados). Y como es UDP, <strong>funciona sobre cualquier red IP</strong>, incluso una WAN.</p>
+  </div>
+  <div class="tab-content" id="s07-mtu">
+    <div class="callout warn">
+      <div class="callout-title">Detalle importante para tu MTU</div>
+      <p>VXLAN agrega <strong>50 bytes de overhead</strong>: 14 outer eth + 20 outer IP + 8 UDP + 8 VXLAN. Si tu underlay tiene MTU 1500, los clientes solo pueden mandar 1450.</p>
+      <p><strong>Siempre configurá jumbo frames (9000 o más) en el underlay.</strong> En el lab los enlaces tienen MTU 9500 por eso.</p>
+    </div>
+  </div>
+  <div class="tab-content" id="s07-e">
+    <div class="callout warn"><div class="callout-title">La captura sale vacía</div>
+    <p>El ping no generó tráfico VXLAN porque client-a y client-b están en el mismo leaf, o la captura se hizo en el enlace equivocado. Verificá con <code>containerlab inspect</code> qué enlace une qué nodos.</p></div>
+    <div class="callout warn"><div class="callout-title">Solo aparecen paquetes EVPN BGP, no VXLAN data</div>
+    <p>El filtro <code>udp port 4789</code> está bien, pero tcpdump podría estar viendo solo BGP control plane si nunca se dispara tráfico real. Asegurate de que el ping corra <strong>después</strong> de arrancar tcpdump.</p></div>
+  </div>
+</div>
+
+<!-- ============== SCRIPT 08 ============== -->
+<h2 id="s08">Script 08 — Hardening del underlay y BGP</h2>
+<div class="script-card">
+  <div class="script-card-header">
+    <div class="script-title">BFD, GTSM, maximum-prefix</div>
+    <div class="script-file">scripts/08-hardening.sh</div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" data-target="s08-q">Qué hace</button>
+    <button class="tab-btn" data-target="s08-l">Línea por línea</button>
+    <button class="tab-btn" data-target="s08-m">Qué mirar</button>
+    <button class="tab-btn" data-target="s08-p">Por qué es relevante</button>
+    <button class="tab-btn" data-target="s08-e">Errores comunes</button>
+  </div>
+  <div class="tab-content active" id="s08-q">
+    <p>Muestra las <strong>protecciones del plano de control</strong> configuradas en el peer-group FABRIC. Nada de esto interrumpe el fabric: son medidas defensivas que limitan el blast radius y detectan fallas sub-segundo.</p>
+    <ul>
+      <li><strong>BFD</strong> con timers 150ms × 3 = detección de falla en ~450ms</li>
+      <li><strong>GTSM</strong> (ttl-security hops 1, RFC 5082): anti-spoofing a nivel IP</li>
+      <li><strong>maximum-prefix 5000</strong>: contiene un leaf comprometido</li>
+      <li><strong>no bgp default ipv4-unicast</strong>: mínimo privilegio</li>
+    </ul>
+  </div>
+  <div class="tab-content" id="s08-l">
+<pre><code>docker exec clab-evpn-ixp-lab-leaf1 vtysh -c "show running-config" \
+  | grep -E "neighbor FABRIC (bfd|ttl-security|maximum-prefix)|no bgp default"</code></pre>
+    <p>Extrae del running-config de leaf1 las líneas de hardening del peer-group FABRIC.</p>
+<pre><code>docker exec clab-evpn-ixp-lab-leaf1 vtysh -c "show bfd peers" \
+  | grep -iE "Status:|interval|multiplier" | head -6</code></pre>
+    <p>Estado de BFD: muestra los timers de 150ms × multiplier 3 que detectan fallas sub-segundo.</p>
+<pre><code>docker exec clab-evpn-ixp-lab-leaf1 vtysh -c "show bgp l2vpn evpn summary" \
+  | grep -E "spine|Total"</code></pre>
+    <p>Confirma que las sesiones BGP EVPN siguen <strong>estables pese al hardening</strong>. Seguridad sin romper nada.</p>
+  </div>
+  <div class="tab-content" id="s08-m">
+    <p>Lo primero: la línea <code>ttl-security hops 1</code>. Anti-spoofing simple y efectivo: si alguien inyecta un paquete TCP/179 con TTL &lt; 255 (desde más de 1 salto), el kernel lo descarta.</p>
+    <p>Lo segundo: los timers BFD sub-segundo. En un fabric EVPN con multi-homing, detectar una falla en 450ms es lo que hace que el failover del script 05 sea tan rápido.</p>
+  </div>
+  <div class="tab-content" id="s08-p">
+    <p>EVPN no endurece el underlay solo. Sin BFD, sin GTSM, sin maximum-prefix, un leaf comprometido o un bug puede contaminar todo el fabric. El hardening es trabajo complementario.</p>
+    <p>El mensaje: <em>"EVPN resuelve el plano de datos y el control-plane de MACs/IPs, pero la seguridad del underlay es tu responsabilidad."</em> En producción agregar TCP-AO (RFC 5925) y CoPP/lpts.</p>
+  </div>
+  <div class="tab-content" id="s08-e">
+    <div class="callout warn"><div class="callout-title">BFD no levanta</div>
+    <p>El perfil BFD no está creado en FRR, o <code>bfd</code> no está bajo el peer-group. Mirá <code>show bfd profile FABRIC</code>.</p></div>
+    <div class="callout warn"><div class="callout-title">Sesiones flapping con GTSM</div>
+    <p>Si hay un middlebox (firewall transparente, switch L3 en medio del enlace), el TTL llega decrementado y GTSM lo rechaza. Solo funciona en enlaces directos.</p></div>
+  </div>
+</div>
+
+<!-- ============== SCRIPT 09 ============== -->
+<h2 id="s09">Script 09 — E-Line (servicio L2 punto a punto)</h2>
+<div class="script-card">
+  <div class="script-card-header">
+    <div class="script-title">E-Line sobre VNI dedicado</div>
+    <div class="script-file">scripts/09-eline.sh</div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" data-target="s09-q">Qué hace</button>
+    <button class="tab-btn" data-target="s09-l">Línea por línea</button>
+    <button class="tab-btn" data-target="s09-m">Qué mirar</button>
+    <button class="tab-btn" data-target="s09-p">Por qué es relevante</button>
+    <button class="tab-btn" data-target="s09-e">Errores comunes</button>
+  </div>
+  <div class="tab-content active" id="s09-q">
+    <p>Demuestra un servicio <strong>L2 punto a punto dedicado</strong>: client-e (en leaf1) y client-f (en leaf2) se conectan como si estuvieran en el mismo cable, a través de un <strong>VNI exclusivo (10300)</strong> sin gateway, sin SVI, sin nada más compartiendo ese VNI.</p>
+    <p>Es el equivalente a un <strong>E-Line / EVPN-VPWS</strong> pero en EVPN-VXLAN puro (lo que FRR soporta nativamente). Solo esos dos puertos de acceso viven en el VNI 10300.</p>
+  </div>
+  <div class="tab-content" id="s09-l">
+<pre><code>docker exec clab-evpn-ixp-lab-leaf1 vtysh -c "show evpn vni 10300" | head -8</code></pre>
+    <p>VNI 10300 como L2VNI dedicado en leaf1. Sin SVI ni gateway — pura conectividad L2.</p>
+<pre><code>docker exec clab-evpn-ixp-lab-leaf1 vtysh -c "show evpn mac vni 10300"</code></pre>
+    <p>MACs aprendidas: el MAC de client-e como <em>"local"</em> (en <code>eth5</code> de leaf1) y el de client-f como <em>"remote"</em> (detrás del VTEP 10.0.0.12).</p>
+<pre><code>docker exec clab-evpn-ixp-lab-client-e ping -c 3 -W 2 203.0.113.2 || true</code></pre>
+    <p>Ping de client-e (203.0.113.1/30) a client-f (203.0.113.2/30). Si funciona, el E-Line está activo.</p>
+  </div>
+  <div class="tab-content" id="s09-m">
+    <p>El VNI 10300 es <strong>completamente independiente</strong> del 10100 (peering), del 20100 (tenant-B), etc. Un servicio aislado corriendo al lado de los demás.</p>
+    <p>Los clientes client-e y client-f no corren FRR ni BGP — son endpoints L2 puros con una IP en un /30. Son <em>"sedes remotas"</em> de un mismo cliente conectadas por el fabric.</p>
+  </div>
+  <div class="tab-content" id="s09-p">
+    <p>Un IXP moderno puede ofrecer <strong>más que una LAN de peering compartida</strong>. Con EVPN sobre el mismo fabric podés vender:</p>
+    <ul>
+      <li>LAN de peering (VNI 10100)</li>
+      <li>LANs privadas entre grupos de miembros</li>
+      <li><strong>Enlaces punto a punto</strong> (E-Lines) entre dos sedes del mismo cliente</li>
+    </ul>
+    <p>Todo sobre el mismo hardware, el mismo plano de control, los mismos spines y leafs. Un solo operador, un solo fabric, múltiples servicios.</p>
+  </div>
+  <div class="tab-content" id="s09-e">
+    <div class="callout warn"><div class="callout-title">El ping no funciona entre client-e y client-f</div>
+    <p>Verificá que el VNI 10300 exista en ambos leafs (<code>show evpn vni 10300</code>). Si falta en uno, el bridge <code>br10300</code> no se creó en el <code>init.sh</code> de ese leaf.</p></div>
+    <div class="callout warn"><div class="callout-title">El VNI 10300 tiene MACs de otros clientes</div>
+    <p>Alguien mezcló puertos en el bridge equivocado. Cada bridge debe tener solo sus puertos de acceso específicos.</p></div>
+  </div>
+</div>
+
+<h2 id="edgeshark">Captura en vivo desde Wireshark remoto (Edgeshark)</h2>
+<p>Para mostrar tráfico del lab desde otra ubicación geográfica (caso típico: charla en Panamá con el lab corriendo en Argentina), levantamos <a href="https://github.com/siemens/edgeshark" target="_blank">Edgeshark</a> como stack aparte.</p>
+<pre><code>cd lab/edgeshark
+cp env.example .env        # ajustar puerto si querés
+docker compose up -d</code></pre>
+<p>Por default escucha en <code>127.0.0.1:19831</code>. Cloudflare Tunnel (configurado a mano) lo expone hacia internet. Detalles, troubleshooting y mapeo de interfaces por script en <code>edgeshark/README.md</code>.</p>
+
+<h2 id="planb">Plan B si el lab se rompe en escenario</h2>
+<div class="callout">
+  <div class="callout-title">Estrategia de respaldo</div>
+  <p>Reglas que aplico siempre que demo en vivo:</p>
+  <ul>
+    <li>Tener los outputs <strong>pre-capturados</strong> (correr los scripts antes y guardar con <code>tee</code>).</li>
+    <li>Tener el <code>.pcap</code> del script 07 listo para abrir en Wireshark.</li>
+    <li>Si solo te queda tiempo para <strong>una</strong> demo en vivo, corré <code>06-peering-inter-asn.sh</code> — es la que justifica el título de la charla.</li>
+    <li>Si el lab se rompe: <code>./scripts/down.sh &amp;&amp; ./scripts/up.sh</code> tarda &lt; 1 minuto en traerlo limpio.</li>
+  </ul>
+</div>
+
+<h2 id="cmds">Comandos útiles fuera del guion</h2>
+<pre><code># Ver todas las VNIs activas en un leaf
+docker exec -it clab-evpn-ixp-lab-leaf1 vtysh -c "show evpn vni detail"
+
+# Ver MACs aprendidas por overlay
+docker exec -it clab-evpn-ixp-lab-leaf1 vtysh -c "show evpn mac vni all"
+
+# Ver ESI (Ethernet Segments) y quién es DF
+docker exec -it clab-evpn-ixp-lab-leaf2 vtysh -c "show evpn es detail"
+
+# Ruta Type-5 puntual
+docker exec -it clab-evpn-ixp-lab-leaf1 vtysh -c "show bgp l2vpn evpn route type prefix"
+
+# Ver el VTEP remoto descubierto
+docker exec -it clab-evpn-ixp-lab-leaf1 bridge fdb show dev vni10100 | grep dst
+
+# Ver BFD peers
+docker exec -it clab-evpn-ixp-lab-leaf1 vtysh -c "show bfd peers brief"
+
+# Tabla MAC del bridge
+docker exec -it clab-evpn-ixp-lab-leaf1 bridge fdb show br br10100 | grep -v permanent
+
+# Bonding status (en client-c)
+docker exec -it clab-evpn-ixp-lab-client-c cat /proc/net/bonding/bond0</code></pre>
+
+<h2 id="validate"><code>validate.sh</code> — Validación completa</h2>
+<p>Pipeline automatizado que despliega el lab, espera 25 segundos de convergencia BGP/EVPN, y ejecuta los <strong>9 scripts de demo</strong> en secuencia (sin abortar si alguno falla). Útil para verificar que el lab quedó sano después de cambios en configs.</p>
+<pre><code>cd lab/
+./scripts/validate.sh 2>&1 | tee validate.log</code></pre>
+<p>Internamente usa <code>set +e</code> para que una falla en un script no aborte la ejecución de los siguientes. Al final muestra el detalle de todas las VNIs activas desde leaf1.</p>
+
+<h2 id="runsh"><code>run.sh</code> — TUI interactiva</h2>
+<p>El punto de entrada principal para operar el lab. Es un menú interactivo basado en <a href="https://github.com/charmbracelet/gum" target="_blank">gum</a> que ofrece:</p>
+<ul>
+  <li><strong>Deploy / destroy / nuke</strong> del lab</li>
+  <li><strong>Estado y topología</strong> ASCII</li>
+  <li><strong>Correr demos individuales o todos</strong> (01–09)</li>
+  <li><strong>Shell interactivo</strong> en cualquier nodo</li>
+  <li><strong>Comandos útiles</strong> (cheat sheet)</li>
+  <li><strong>Chequeo de dependencias</strong> e instalación de gum</li>
+</ul>
+<pre><code>cd lab/
+./run.sh</code></pre>
+<p>Requiere <code>docker</code>, <code>containerlab</code> y <code>gum</code>. Si <code>gum</code> no está instalado, ofrece instalarlo automáticamente.</p>
+
+<h2 id="estructura">Estructura del repo</h2>
+<pre><code>lab/
+├── run.sh                     # TUI interactiva (punto de entrada principal)
+├── topology.clab.yml          # topología containerlab
+├── README.md                  # readme principal
+├── SCRIPTS_GUIDE.md           # guía detallada (markdown)
+├── SCRIPTS_GUIDE.html         # esta página
+├── configs/
+│   ├── _common/               # daemons y vtysh.conf compartidos
+│   ├── spine1/  spine2/       # configs FRR de spines
+│   ├── leaf1/   leaf2/  leaf3/  # configs FRR + init.sh de leafs
+│   ├── client-a/ ... client-d/  # configs FRR + init.sh de clientes (peering)
+│   └── client-e/  client-f/   # configs E-Line (VNI 10300, sin FRR)
+├── scripts/
+│   ├── up.sh / down.sh        # deploy / destroy
+│   ├── validate.sh            # pipeline de validación completa (01–09)
+│   ├── 01-underlay.sh
+│   ├── 02-evpn-type2-type3.sh
+│   ├── 03-evpn-type5-anycast.sh
+│   ├── 04-multitenancy.sh
+│   ├── 05-mh-esi-lag.sh
+│   ├── 06-peering-inter-asn.sh
+│   ├── 07-vxlan-capture.sh
+│   ├── 08-hardening.sh        # BFD, GTSM, maximum-prefix
+│   └── 09-eline.sh            # E-Line punto a punto (VNI 10300)
+└── edgeshark/                 # "Wireshark remoto" para la demo
+    ├── docker-compose.yml
+    ├── env.example
+    └── README.md</code></pre>
+
+<p style="margin-top: 3rem; color: var(--text-muted); text-align: center;">— Ariel Weher · LACNIC 45 / FTL · Espero les sirva.</p>
+
+</main>
+
+<script>
+/* THEME */
+const themeBtn = document.getElementById('theme-toggle');
+const body = document.body;
+function setTheme(t) {
+  body.dataset.theme = t;
+  themeBtn.textContent = (t === 'dark' ? '☀ ' : '☾ ') + 'Cambiar tema';
+  try { localStorage.setItem('lab-theme', t); } catch(e) {}
+}
+themeBtn.addEventListener('click', () => {
+  setTheme(body.dataset.theme === 'dark' ? 'light' : 'dark');
+});
+try {
+  const saved = localStorage.getItem('lab-theme');
+  if (saved) setTheme(saved);
+} catch(e) {}
+
+/* TABS */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const card = btn.closest('.script-card');
+    card.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    card.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    card.querySelector('#' + btn.dataset.target).classList.add('active');
+  });
+});
+
+/* COPY BUTTON */
+document.querySelectorAll('pre').forEach(pre => {
+  const btn = document.createElement('button');
+  btn.className = 'copy-btn';
+  btn.textContent = 'copiar';
+  btn.addEventListener('click', () => {
+    const code = pre.querySelector('code')?.innerText || pre.innerText;
+    navigator.clipboard.writeText(code).then(() => {
+      btn.textContent = '✓ copiado';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'copiar'; btn.classList.remove('copied'); }, 1500);
+    });
+  });
+  pre.appendChild(btn);
+});
+
+/* SEARCH */
+const search = document.getElementById('search');
+const tocLinks = document.querySelectorAll('#toc a');
+search.addEventListener('input', e => {
+  const q = e.target.value.toLowerCase().trim();
+  if (!q) {
+    tocLinks.forEach(a => a.classList.remove('hidden'));
+    document.querySelectorAll('main h2, main section, main .script-card').forEach(el => el.classList.remove('hidden'));
+    return;
+  }
+  // Filtro de TOC
+  tocLinks.forEach(a => {
+    a.classList.toggle('hidden', !a.textContent.toLowerCase().includes(q));
+  });
+  // Filtro de contenido por sección (h2 + lo que sigue hasta el próximo h2)
+  const sections = [];
+  let current = null;
+  document.querySelectorAll('main > *').forEach(el => {
+    if (el.tagName === 'H2') {
+      if (current) sections.push(current);
+      current = { heading: el, elements: [el] };
+    } else if (current) {
+      current.elements.push(el);
+    }
+  });
+  if (current) sections.push(current);
+  sections.forEach(s => {
+    const text = s.elements.map(e => e.textContent).join(' ').toLowerCase();
+    const matches = text.includes(q);
+    s.elements.forEach(e => e.classList.toggle('hidden', !matches));
+  });
+});
+search.addEventListener('keydown', e => { if (e.key === 'Escape') { search.value = ''; search.dispatchEvent(new Event('input')); search.blur(); } });
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault(); search.focus(); search.select();
+  }
+});
+
+/* SCROLL-SPY */
+const sections = Array.from(document.querySelectorAll('main h2[id], main section[id]'));
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      tocLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + id));
+    }
+  });
+}, { rootMargin: '-30% 0px -60% 0px' });
+sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

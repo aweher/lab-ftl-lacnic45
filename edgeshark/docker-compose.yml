@@ -1,0 +1,112 @@
+# =============================================================================
+# Edgeshark — "Wireshark remoto" para el lab containerlab
+# Lab: EVPN & VXLAN — LACNIC 45 / FTL
+#
+# Base: docker-compose-localhost.yaml oficial de siemens/edgeshark
+#   https://github.com/siemens/edgeshark/blob/main/deployments/wget/docker-compose-localhost.yaml
+#
+# Diferencias respecto del oficial:
+#   - Puerto configurable via .env (EDGESHARK_PORT, default 19831).
+#   - Bind a 127.0.0.1 (loopback). NO se expone a internet directamente.
+#     Para acceso desde afuera (Panamá -> server en Argentina), poner
+#     Cloudflare Tunnel apuntando a 127.0.0.1:${EDGESHARK_PORT}.
+#   - Stack INDEPENDIENTE del topology.clab.yml: se levanta/baja sin
+#     afectar al lab. Descubre los containers de containerlab via
+#     el motor de Docker del host.
+#
+# Uso:
+#   cp env.example .env        # ajustar puerto si querés
+#   docker compose up -d
+#   # abrir: http://127.0.0.1:19831
+#   docker compose down        # parar el stack
+#
+# Para captura en vivo desde Wireshark local:
+#   - Instalar el plugin cshargextcap:
+#     https://github.com/siemens/cshargextcap/releases
+#   - Abrir la UI web, navegar al container del lab y hacer clic en el
+#     icono de "shark" sobre la interfaz que querés capturar.
+#
+# Doc:
+#   https://github.com/siemens/edgeshark
+#   https://siemens.github.io/edgeshark/
+# =============================================================================
+
+name: 'edgeshark'
+
+services:
+
+    # -------------------------------------------------------------------------
+    # gostwire = backend de descubrimiento (ghostwire) + UI web
+    # -------------------------------------------------------------------------
+    gostwire:
+        image: 'ghcr.io/siemens/ghostwire'
+        pull_policy: always
+        restart: 'unless-stopped'
+        read_only: true
+        entrypoint:
+            - "/gostwire"
+            - "--http=[::]:5000"
+            - "--brand=Edgeshark"
+        user: "65534"
+        # Drop ALL + agregar solo lo necesario (ver compose oficial para detalles).
+        cap_drop:
+            - ALL
+        cap_add:
+            - CAP_SYS_ADMIN       # cambiar namespaces
+            - CAP_SYS_CHROOT      # cambiar mount namespaces
+            - CAP_SYS_PTRACE      # acceder a /proc/$PID/ns/*
+            - CAP_DAC_READ_SEARCH # leer /proc/$PID/fd
+            - CAP_DAC_OVERRIDE    # acceder al socket de docker
+            - CAP_NET_RAW
+            - CAP_NET_ADMIN
+        security_opt:
+            # AppArmor default de Docker bloquea ptrace sobre namespaces.
+            - apparmor:unconfined
+        pid: 'host'    # necesita vista completa de PIDs del host
+        cgroup: host
+        networks:
+            99-ghost-in-da-edge:
+                priority: 100
+
+    # -------------------------------------------------------------------------
+    # edgeshark = packetflix (streaming pcap por websocket) + proxy a gostwire
+    # -------------------------------------------------------------------------
+    edgeshark:
+        image: 'ghcr.io/siemens/packetflix'
+        pull_policy: 'always'
+        read_only: true
+        restart: 'unless-stopped'
+        entrypoint:
+            - "/packetflix"
+            - "--port=5001"
+            - "--discovery-service=gostwire.ghost-in-da-edge"
+            - "--gw-port=5000"
+            - "--proxy-discovery"
+            - "--debug"
+
+        # BIND a 127.0.0.1 — Cloudflare Tunnel se encarga del acceso externo.
+        # El puerto del host es configurable via .env.
+        ports:
+            - "127.0.0.1:${EDGESHARK_PORT:-19831}:5001"
+
+        user: "65534"
+        cap_drop:
+            - ALL
+        cap_add:
+            - CAP_SYS_ADMIN
+            - CAP_SYS_CHROOT
+            - CAP_SYS_PTRACE
+            - CAP_NET_ADMIN
+            - CAP_NET_RAW
+        security_opt:
+            - apparmor:unconfined
+        pid: 'host'
+
+        networks:
+            99-ghost-in-da-edge:
+                priority: 100
+
+networks:
+    99-ghost-in-da-edge:
+        name: ghost-in-da-edge
+        internal: false

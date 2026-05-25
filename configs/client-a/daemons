@@ -1,0 +1,14 @@
+# FRR daemons - solo lo que necesitamos para este lab
+zebra=yes
+bgpd=yes
+staticd=yes
+mgmtd=yes
+bfdd=yes
+
+# Flags
+zebra_options="  -A 127.0.0.1 -s 90000000"
+bgpd_options="   -A 127.0.0.1"
+staticd_options="-A 127.0.0.1"
+mgmtd_options="  -A 127.0.0.1"
+bfdd_options="   -A 127.0.0.1"
+vtysh_enable=yes

@@ -1,0 +1,37 @@
+# containerlab state
+clab-*/
+*.clab.yml.bak
+
+# packet captures
+*.pcap
+*.pcapng
+*.cap
+
+# generated docs
+SCRIPTS_GUIDE.html
+
+# logs
+*.log
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# editor / IDE
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+.cursor/
+
+# Python
+__pycache__/
+*.pyc
+
+# temp
+*.tmp
+*.bak
+
+# edgeshark — secretos locales
+edgeshark/.env

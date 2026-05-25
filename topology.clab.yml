@@ -1,0 +1,190 @@
+# =============================================================================
+# Lab: EVPN & VXLAN — "El nuevo idioma del peering moderno"
+# Evento: LACNIC 45 / FTL
+# Autor:  Ariel Weher (Ayuda.LA)
+#
+# Topología IXP-style sobre FRR 10.2.1
+#
+#                          +-----------+      +-----------+
+#                          |  spine1   |      |  spine2   |
+#                          | AS 65001  |      | AS 65002  |
+#                          +-----+-----+      +-----+-----+
+#                              / | \              / | \
+#                             /  |  \            /  |  \
+#              +-------------+   |   +----------+   |   +-------------+
+#              |                 |              |   |                 |
+#         +----+-----+      +----+-----+   +----+---+--+
+#         |  leaf1   |      |  leaf2   |   |  leaf3   |
+#         | AS 65011 |      | AS 65012 |   | AS 65013 |
+#         +----+-----+      +----+-----+   +----+-----+
+#              |                 |  \           /  |
+#              |                 |   \         /   |
+#         +----+----+       +----+-+  \-+---+-/   ++--------+
+#         | client- |       |client-|   |client-|  | client- |
+#         |    A    |       |   B   |   |   C   |  |    D    |
+#         | AS 64601|       |AS64602|   |AS64603|  | AS 64604|
+#         +---------+       +-------+   +-------+  +---------+
+#                                      (ESI-LAG MH)
+#
+# VNIs:
+#   L2VNI 10100 -> VLAN Peering (clientes A, B, C, D)
+#   L2VNI 10200 -> Mgmt interna del IXP (multi-tenant demo)
+#   L3VNI  5000 -> VRF tenant-A (anycast GW + Type-5)
+#   L3VNI  5001 -> VRF tenant-B (aislado de tenant-A)
+# =============================================================================
+
+name: evpn-ixp-lab
+
+mgmt:
+  network: clab-mgmt
+  ipv4-subnet: 172.30.30.0/24
+
+topology:
+  kinds:
+    linux:
+      image: quay.io/frrouting/frr:10.2.1
+
+  nodes:
+    # -----------------------------------------------------------------
+    # SPINES (route reflectors EVPN)
+    # -----------------------------------------------------------------
+    spine1:
+      kind: linux
+      binds:
+        - configs/spine1/daemons:/etc/frr/daemons
+        - configs/spine1/frr.conf:/etc/frr/frr.conf
+        - configs/spine1/vtysh.conf:/etc/frr/vtysh.conf
+      exec:
+        - ip link set lo up
+        - ip addr add 10.0.0.1/32 dev lo
+        - /usr/lib/frr/frrinit.sh start
+
+    spine2:
+      kind: linux
+      binds:
+        - configs/spine2/daemons:/etc/frr/daemons
+        - configs/spine2/frr.conf:/etc/frr/frr.conf
+        - configs/spine2/vtysh.conf:/etc/frr/vtysh.conf
+      exec:
+        - ip link set lo up
+        - ip addr add 10.0.0.2/32 dev lo
+        - /usr/lib/frr/frrinit.sh start
+
+    # -----------------------------------------------------------------
+    # LEAFS (PEs del IXP, hacen VTEP)
+    # -----------------------------------------------------------------
+    leaf1:
+      kind: linux
+      binds:
+        - configs/leaf1/daemons:/etc/frr/daemons
+        - configs/leaf1/frr.conf:/etc/frr/frr.conf
+        - configs/leaf1/vtysh.conf:/etc/frr/vtysh.conf
+        - configs/leaf1/init.sh:/init.sh
+      exec:
+        - bash /init.sh
+
+    leaf2:
+      kind: linux
+      binds:
+        - configs/leaf2/daemons:/etc/frr/daemons
+        - configs/leaf2/frr.conf:/etc/frr/frr.conf
+        - configs/leaf2/vtysh.conf:/etc/frr/vtysh.conf
+        - configs/leaf2/init.sh:/init.sh
+      exec:
+        - bash /init.sh
+
+    leaf3:
+      kind: linux
+      binds:
+        - configs/leaf3/daemons:/etc/frr/daemons
+        - configs/leaf3/frr.conf:/etc/frr/frr.conf
+        - configs/leaf3/vtysh.conf:/etc/frr/vtysh.conf
+        - configs/leaf3/init.sh:/init.sh
+      exec:
+        - bash /init.sh
+
+    # -----------------------------------------------------------------
+    # CLIENTES IXP (cada uno con su ASN, peerean sobre el fabric)
+    # Usamos FRR también en los clientes para hacer eBGP real.
+    # -----------------------------------------------------------------
+    client-a:
+      kind: linux
+      binds:
+        - configs/client-a/daemons:/etc/frr/daemons
+        - configs/client-a/frr.conf:/etc/frr/frr.conf
+        - configs/client-a/vtysh.conf:/etc/frr/vtysh.conf
+        - configs/client-a/init.sh:/init.sh
+      exec:
+        - bash /init.sh
+
+    client-b:
+      kind: linux
+      binds:
+        - configs/client-b/daemons:/etc/frr/daemons
+        - configs/client-b/frr.conf:/etc/frr/frr.conf
+        - configs/client-b/vtysh.conf:/etc/frr/vtysh.conf
+        - configs/client-b/init.sh:/init.sh
+      exec:
+        - bash /init.sh
+
+    # Multi-homed (ESI-LAG) a leaf2 + leaf3
+    client-c:
+      kind: linux
+      binds:
+        - configs/client-c/daemons:/etc/frr/daemons
+        - configs/client-c/frr.conf:/etc/frr/frr.conf
+        - configs/client-c/vtysh.conf:/etc/frr/vtysh.conf
+        - configs/client-c/init.sh:/init.sh
+      exec:
+        - bash /init.sh
+
+    client-d:
+      kind: linux
+      binds:
+        - configs/client-d/daemons:/etc/frr/daemons
+        - configs/client-d/frr.conf:/etc/frr/frr.conf
+        - configs/client-d/vtysh.conf:/etc/frr/vtysh.conf
+        - configs/client-d/init.sh:/init.sh
+      exec:
+        - bash /init.sh
+
+    # E-Line dedicado (VNI 10300) punto a punto entre dos sedes de un mismo cliente
+    client-e:
+      kind: linux
+      binds:
+        - configs/client-e/init.sh:/init.sh
+      exec:
+        - bash /init.sh
+
+    client-f:
+      kind: linux
+      binds:
+        - configs/client-f/init.sh:/init.sh
+      exec:
+        - bash /init.sh
+
+  # ---------------------------------------------------------------------
+  # CABLEADO
+  # ---------------------------------------------------------------------
+  links:
+    # Spine <-> Leaf (underlay)
+    - endpoints: ["spine1:eth1", "leaf1:eth1"]
+    - endpoints: ["spine1:eth2", "leaf2:eth1"]
+    - endpoints: ["spine1:eth3", "leaf3:eth1"]
+    - endpoints: ["spine2:eth1", "leaf1:eth2"]
+    - endpoints: ["spine2:eth2", "leaf2:eth2"]
+    - endpoints: ["spine2:eth3", "leaf3:eth2"]
+
+    # Clientes -> Leafs (access)
+    - endpoints: ["client-a:eth1", "leaf1:eth3"]   # single-homed
+    - endpoints: ["client-b:eth1", "leaf2:eth3"]   # single-homed
+
+    # client-c multi-homed (ESI-LAG all-active) a leaf2 y leaf3
+    - endpoints: ["client-c:eth1", "leaf2:eth4"]
+    - endpoints: ["client-c:eth2", "leaf3:eth3"]
+
+    - endpoints: ["client-d:eth1", "leaf3:eth4"]   # single-homed, VRF tenant-B
+
+    # E-Line: client-e y client-f en VNI 10300 dedicado (servicio L2 punto a punto)
+    - endpoints: ["client-e:eth1", "leaf1:eth5"]
+    - endpoints: ["client-f:eth1", "leaf2:eth5"]
